@@ -9,7 +9,7 @@ namespace ShortsPoster
         public static ILogger logger;
         public static async Task Main(string[] args)
         {
-            
+            Console.WriteLine("text");
             var builder = WebApplication.CreateBuilder(args);
             builder.Logging.ClearProviders();
             builder.Logging.AddConsole();
