@@ -11,6 +11,8 @@ using ShortsPoster.Db;
 using Microsoft.EntityFrameworkCore;
 using System.Collections.Concurrent;
 using File = System.IO.File;
+using ShortsPoster.Interfaces;
+using ShortsPoster.Util;
 
 namespace ShortsPoster;
 
@@ -20,6 +22,7 @@ public sealed class TelegramBotService : BackgroundService
     private readonly IServiceProvider _services;
     private readonly IConfiguration _cfg;
     private readonly ILogger<TelegramBotService> _log;
+    private readonly IVideoPoster _videoPoster;
 
     private enum Step { None, WaitVideo, WaitTitle, WaitDesc, WaitTags }
 
@@ -44,8 +47,8 @@ public sealed class TelegramBotService : BackgroundService
                     ?? throw new InvalidOperationException("TelegramBotToken env missing");
        
         _bot = new TelegramBotClient(token);
-        
-        
+        _videoPoster = new YouTubePoster(cfg, services);
+
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -165,6 +168,9 @@ public sealed class TelegramBotService : BackgroundService
                 db.LastTags.Add(new() { TelegramUserId = uid, TagsCsv = string.Join(',', tags) });
             else
                 row.TagsCsv = string.Join(',', tags);
+            var old = db.LastTags.Where(x => x.TelegramUserId == uid);
+            db.LastTags.RemoveRange(old);
+            db.LastTags.Add(new() { TelegramUserId = uid, TagsCsv = string.Join(',', tags) });
             await db.SaveChangesAsync(ct);
         }
 
@@ -176,39 +182,19 @@ public sealed class TelegramBotService : BackgroundService
             File.Delete(sess.VideoPath);
             return;
         }
-
-        var cred = BuildUserCredential(tok.RefreshToken, uid);
-        var yt = new YouTubeService(new BaseClientService.Initializer
+        try
         {
-            HttpClientInitializer = cred,
-            ApplicationName = "TelegramYouTubeBot"
-        });
-
-        var video = new Google.Apis.YouTube.v3.Data.Video
-        {
-            Snippet = new()
-            {
-                Title = sess.Title,
-                Description = sess.Description + "#"+ string.Join("# ", tags),
-                Tags = tags
-            },
-            Status = new()
-            {
-                PrivacyStatus = "public",
-                MadeForKids = false,
-                SelfDeclaredMadeForKids = false
-            }
-        };
-
-        await using (var fs = File.OpenRead(sess.VideoPath))
-        {
-            var req = yt.Videos.Insert(video, "snippet,status", fs, "video/*");
-            await req.UploadAsync(ct);
-
-        await _bot.SendMessage(chatId,
-            $"✅ Видео загружено! ID: {req.ResponseBody?.Id}");
+            var url = await _videoPoster.UploadAsync(uid, sess.VideoPath, sess.Title!, sess.Description!, tags, ct);
+            await _bot.SendMessage(chatId, $"✅ Видео загружено! {url}");
         }
-        File.Delete(sess.VideoPath);
+        catch (Exception ex)
+        {
+            await _bot.SendMessage(chatId, $"Ошибка загрузки: {ex.Message}");
+        }
+        finally
+        {
+            File.Delete(sess.VideoPath);
+        }
     }
 
     private Task HandleErrorAsync(ITelegramBotClient _, Exception ex, CancellationToken _2)
@@ -231,21 +217,5 @@ public sealed class TelegramBotService : BackgroundService
                $"&state={tgUserId}" +
                $"&redirect_uri={Uri.EscapeDataString(red)}" +
                $"&client_id={cid}";
-    }
-
-    private UserCredential BuildUserCredential(string refreshToken, long tgUserId)
-    {
-        var flow = new GoogleAuthorizationCodeFlow(new()
-        {
-            ClientSecrets = new()
-            {
-                ClientId = _cfg["GoogleOAuth:ClientId"],
-                ClientSecret = _cfg["GoogleOAuth:ClientSecret"]
-            },
-            Scopes = new[] { YouTubeService.Scope.YoutubeUpload }
-        });
-
-        return new UserCredential(flow, tgUserId.ToString(),
-                                  new TokenResponse { RefreshToken = refreshToken });
     }
 }
