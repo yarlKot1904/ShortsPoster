@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using ShortsPoster.Db;
 
@@ -9,7 +10,7 @@ namespace ShortsPoster
         public static ILogger logger;
         public static async Task Main(string[] args)
         {
-            
+            Console.WriteLine("Started");
             var builder = WebApplication.CreateBuilder(args);
             builder.Logging.ClearProviders();
             builder.Logging.AddConsole();
