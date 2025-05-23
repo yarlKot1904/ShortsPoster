@@ -12,11 +12,13 @@ namespace ShortsPoster
         public static async Task Main(string[] args)
         {
             // Настройка Serilog
+          
             Log.Logger = new LoggerConfiguration()
-                .MinimumLevel.Information()
-                .WriteTo.Console()
-                .WriteTo.File("Logs/log.txt", rollingInterval: RollingInterval.Day)
+                .MinimumLevel.Debug() // общий минимальный уровень (для всех)
+                .WriteTo.Console(restrictedToMinimumLevel: Serilog.Events.LogEventLevel.Information) // консоль — Info и выше
+                .WriteTo.File("Logs/log.txt", rollingInterval: RollingInterval.Day, restrictedToMinimumLevel: Serilog.Events.LogEventLevel.Debug) // файл — Debug и выше
                 .CreateLogger();
+
 
             try
             {
