@@ -18,6 +18,14 @@ namespace ShortsPoster;
 
 public sealed class TelegramBotService : BackgroundService
 {
+
+    private readonly ILogger<TelegramBotService> _logger;
+
+        public TelegramBotService(ILogger<TelegramBotService> logger)
+        {
+            _logger = logger;
+        }
+
     private readonly ITelegramBotClient _bot;
     private readonly IServiceProvider _services;
     private readonly IConfiguration _cfg;
@@ -53,6 +61,8 @@ public sealed class TelegramBotService : BackgroundService
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
+        _logger.LogInformation("TelegramBotService запущен");
+
         _bot.StartReceiving(HandleUpdateAsync,
                             HandleErrorAsync,
                             new() { AllowedUpdates = Array.Empty<UpdateType>() },
@@ -60,6 +70,8 @@ public sealed class TelegramBotService : BackgroundService
 
         var me = await _bot.GetMe(stoppingToken);
         _log.LogInformation("Bot @{u} started", me.Username);
+
+        _logger.LogInformation("TelegramBotService остановлен");
     }
 
     private async Task HandleUpdateAsync(ITelegramBotClient bot, Update upd, CancellationToken ct)
