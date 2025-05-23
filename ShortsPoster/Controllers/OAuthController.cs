@@ -17,11 +17,13 @@
     {
         private readonly AppDbContext _db;
         private readonly IConfiguration _config;
+        private readonly ILogger<OAuthController> _logger;
 
-        public OAuthController(AppDbContext db, IConfiguration config)
+        public OAuthController(AppDbContext db, IConfiguration config, ILogger<OAuthController> logger)
         {
             _db = db;
             _config = config;
+            _logger = logger;
         }
 
         [HttpGet("callback")]
@@ -29,9 +31,13 @@
         {
             // state — telegramUserId
             if (string.IsNullOrEmpty(code) || string.IsNullOrEmpty(state))
+            {
+                _logger.LogWarning("Callback received with missing code or state");
                 return BadRequest("Missing code or state");
-
+            }
             var telegramUserId = long.Parse(state);
+
+            _logger.LogInformation("Processing OAuth callback for Telegram user {UserId}", telegramUserId);
 
             var clientId = _config["GoogleOAuth:ClientId"];
             var clientSecret = _config["GoogleOAuth:ClientSecret"];
@@ -56,6 +62,10 @@
             Program.logger.LogInformation("token2 " + token.AccessToken);
             Program.logger.LogInformation("token3 " + token.TokenType);
 
+            _logger.LogInformation("Token received for user {UserId}", telegramUserId);
+            _logger.LogDebug("AccessToken: {AccessToken}, RefreshToken: {RefreshToken}, TokenType: {TokenType}",
+                        token.AccessToken, token.RefreshToken, token.TokenType);
+
             var userToken = _db.UserTokens.FirstOrDefault(x => x.TelegramUserId == telegramUserId);
             if (userToken == null)
             {
@@ -65,10 +75,12 @@
                     RefreshToken = token.AccessToken
                 };
                 _db.UserTokens.Add(userToken);
+                _logger.LogInformation("New user token added for user {UserId}", telegramUserId);
             }
             else
             {
                 userToken.RefreshToken = token.AccessToken;
+                _logger.LogInformation("Existing user token updated for user {UserId}", telegramUserId);
             }
             await _db.SaveChangesAsync();
 
