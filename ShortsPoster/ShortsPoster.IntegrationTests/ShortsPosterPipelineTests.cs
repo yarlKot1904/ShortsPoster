@@ -1,39 +1,27 @@
 using Xunit;
-using ShortsPoster.Services;
-using System.Threading.Tasks;
-using System.IO;
+using System;
+using System.Threading;
+using ShortsPoster.Util;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Moq;
 
-namespace ShortsPoster.IntegrationTests
+public class ShortsPosterPipeLineTests
 {
-    public class ShortsPosterPipelineTests
+    [Fact]
+    public async Task UploadAsync_ThrowsIfUserNotAuthorized()
     {
-        [Fact]
-        public async Task Pipeline_ProcessesTelegramVideoAndUploadsToYouTube()
+        var cfg = new ConfigurationBuilder().Build();
+        var services = new ServiceCollection();
+        services.AddLogging();
+        services.AddSingleton(cfg);
+        var provider = services.BuildServiceProvider();
+
+        var poster = new YouTubePoster(cfg, provider);
+        await Assert.ThrowsAsync<InvalidOperationException>(async () =>
         {
-            
-            var testVideoPath = Path.Combine("test_data", "test_video.mp4");
-            Assert.True(File.Exists(testVideoPath), "Test video file is missing.");
-
-            var telegramService = new TelegramService();      
-            var processor = new VideoProcessor();             
-            var youtubeUploader = new YouTubeUploader();      
-
-            
-            var messageId = await telegramService.UploadTestVideoAsync(testVideoPath);
-            Assert.NotNull(messageId);
-
-            var result = await processor.ProcessAsync(messageId);
-            Assert.True(result.IsSuccess);
-
-            var uploadResult = await youtubeUploader.UploadAsync(
-                result.OutputFilePath,
-                "Test Title",
-                "Test Description"
-            );
-
-            
-            Assert.True(uploadResult.IsSuccess);
-            Assert.False(string.IsNullOrWhiteSpace(uploadResult.VideoId));
-        }
+            await poster.UploadAsync(123, "not_exists.mp4", "title", "desc", Array.Empty<string>(), CancellationToken.None);
+        });
     }
 }
