@@ -1,0 +1,7 @@
+version: "2"
+authtoken: 2xGtQkT3pdiaGIc6hYhcrFlVou5_y4EddAAy6HETdgSWakn4
+tunnels:
+  my-static-domain:
+    proto: http
+    addr: shortsposter:8080
+    domain: ample-informally-crawdad.ngrok-free.app

@@ -1,0 +1,47 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15
+    restart: always
+    environment:
+      POSTGRES_DB: shorts_poster
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 0000
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  app:
+    build: .
+    depends_on:
+      - db
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__DefaultConnection: "Host=db;Database=shorts_poster;Username=postgres;Password=0000"
+      GoogleOAuth__ClientId: "859550166856-3vl989r4gcirr6sl4kmjsusluhgajqqt.apps.googleusercontent.com"
+      GoogleOAuth__ClientSecret: "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"
+      GoogleOAuth__RedirectUri: "https://ample-informally-crawdad.ngrok-free.app/oauth/callback"
+      TelegramBotToken: "7877601734:AAFf05BZ-l3uIXVmTLyYlrs7Lnz1sBltnnI"
+    ports:
+      - "8080:8080"
+      - "8081:8081"
+    volumes:
+      - .:/app
+    command: ["dotnet", "ShortsPoster.dll"]
+  migrator:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: build
+    working_dir: /src
+    entrypoint: ["dotnet", "ef", "database", "update"]
+    environment:
+      ConnectionStrings__DefaultConnection: "Host=db;Database=shorts_poster;Username=postgres;Password=0000"
+      ASPNETCORE_ENVIRONMENT: Development
+    depends_on:
+      - db
+
+volumes:
+  pgdata:
