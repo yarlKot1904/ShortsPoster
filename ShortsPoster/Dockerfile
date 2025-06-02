@@ -1,30 +1,33 @@
-# См. статью по ссылке https://aka.ms/customizecontainer, чтобы узнать как настроить контейнер отладки и как Visual Studio использует этот Dockerfile для создания образов для ускорения отладки.
-
-# Этот этап используется при запуске из VS в быстром режиме (по умолчанию для конфигурации отладки)
+# Этап базового образа
 FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS base
-USER $APP_UID
 WORKDIR /app
 EXPOSE 8080
 EXPOSE 8081
 
-
-# Этот этап используется для сборки проекта службы
+# Этап сборки
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
-COPY ["ShortsPoster/ShortsPoster.csproj", "ShortsPoster/"]
-RUN dotnet restore "./ShortsPoster/ShortsPoster.csproj"
-COPY . .
-WORKDIR "/src/ShortsPoster"
-RUN dotnet build "./ShortsPoster.csproj" -c $BUILD_CONFIGURATION -o /app/build
 
-# Этот этап используется для публикации проекта службы, который будет скопирован на последний этап
+# Копируем csproj
+COPY ShortsPoster.csproj ./
+RUN dotnet restore ./ShortsPoster.csproj
+
+# Копируем все остальные файлы проекта
+COPY . ./
+RUN dotnet build ./ShortsPoster.csproj -c $BUILD_CONFIGURATION -o /app/build
+
+RUN dotnet tool install --global dotnet-ef
+ENV PATH="$PATH:/root/.dotnet/tools"
+
+# Публикация
 FROM build AS publish
 ARG BUILD_CONFIGURATION=Release
 RUN dotnet publish "./ShortsPoster.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
 
-# Этот этап используется в рабочей среде или при запуске из VS в обычном режиме (по умолчанию, когда конфигурация отладки не используется)
+# Финальный образ
 FROM base AS final
 WORKDIR /app
 COPY --from=publish /app/publish .
 ENTRYPOINT ["dotnet", "ShortsPoster.dll"]
+
