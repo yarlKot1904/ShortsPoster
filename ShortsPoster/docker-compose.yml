@@ -42,6 +42,15 @@ services:
       ASPNETCORE_ENVIRONMENT: Development
     depends_on:
       - db
+  tests:
+    build:
+      context: .
+      dockerfile: Dockerfile.tests
+    depends_on:
+      - db
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+
 
 volumes:
   pgdata:

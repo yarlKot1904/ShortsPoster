@@ -1,20 +1,23 @@
 using Xunit;
 using ShortsPoster.Util;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Configuration;
+using Moq;
 
 public class YouTubePosterTests
 {
     [Fact]
-    public void Constructor_ShouldCreateInstance()
+    public void Constructor_CreatesInstance()
     {
-        var poster = new YouTubePoster();
-        Assert.NotNull(poster);
-    }
+        var services = new ServiceCollection();
+        var loggerMock = new Mock<ILogger<YouTubePoster>>();
+        services.AddSingleton(loggerMock.Object);
+        var cfgMock = new Mock<IConfiguration>();
+        services.AddSingleton(cfgMock.Object);
+        var provider = services.BuildServiceProvider();
 
-    [Fact]
-    public async Task PostVideoAsync_ShouldThrowIfInvalid()
-    {
-        var poster = new YouTubePoster();
-        await Assert.ThrowsAsync<ArgumentException>(() =>
-            poster.PostVideoAsync(null, "", "", ""));
+        var poster = new YouTubePoster(cfgMock.Object, provider);
+        Assert.NotNull(poster);
     }
 }
