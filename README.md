@@ -8,5 +8,6 @@ run\
 &emsp;    docker compose up -d app\
 tests\
 &emsp; docker build -f Dockerfile.tests -t shortsposter-tests .\
-&emsp; docker run --rm shortsposter-tests
-
+&emsp; docker run --rm shortsposter-tests\
+Report:
+https://github.com/yarlKot1904/ShortsPoster/blob/master/report.md
