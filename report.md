@@ -51,23 +51,16 @@
 
 ### 4.1 C4 Context
 
-```
-[User] → (Telegram) → [ShortsPoster Bot] → [YouTube Data API]
-                                   ↓
-                                [PostgreSQL]
-```
+![изображение](https://github.com/user-attachments/assets/20ef26e3-799c-4979-bc79-51d2f8be007f)
+
 
 - Пользователь общается через Telegram‑клиент.
 - Бот (ASP.NET Core + Telegram.Bot) обрабатывает команды, управляет сессиями и загружает ролики через YouTube API.
 - PostgreSQL хранит OAuth‑токены и последние теги.
 
 ### 4.2 C4 Container
+![изображение](https://github.com/user-attachments/assets/1961eea5-8820-4ff9-ba9d-98573a6ace61)
 
-| Container    | Технологии            | Ответственность                                                          |
-| ------------ | --------------------- | ------------------------------------------------------------------------ |
-| **Bot API**  | ASP.NET Core, Serilog | REST‑endpoints (`/oauth/callback`), long polling Telegram, бизнес‑логика |
-| **DB**       | PostgreSQL 15         | Таблицы `usertokens`, `userlasttags`                                     |
-| **External** | YouTube Data v3       | Загрузка видео, метаданные                                               |
 
 ### 4.3 Схема БД (DDL)
 
